@@ -1,0 +1,37 @@
+name: Gold Bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # start a new ~5 min run every 5 minutes
+  workflow_dispatch:         # lets you start it manually from the Actions tab
+
+# Never run two copies at once (two pollers would conflict on Telegram)
+concurrency:
+  group: gold-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install requests
+
+      # Keeps alerts/subscriptions between runs (private to your repo)
+      - name: Restore bot state
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: gold-state-${{ github.run_id }}
+          restore-keys: gold-state-
+
+      - name: Run bot
+        run: python gold_bot_actions.py
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
